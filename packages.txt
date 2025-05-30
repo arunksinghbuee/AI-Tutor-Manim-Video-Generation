@@ -1,0 +1,5 @@
+pkg-config
+cairo
+cmake
+build-essential
+ffmpeg
