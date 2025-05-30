@@ -8,3 +8,8 @@ libgl1-mesa-dev
 libavcodec-dev
 libavformat-dev
 libswscale-dev
+texlive
+texlive-latex-extra
+texlive-fonts-recommended
+dvisvgm
+cm-super
