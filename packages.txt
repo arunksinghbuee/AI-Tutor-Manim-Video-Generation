@@ -1,5 +1,5 @@
 pkg-config
-cairo
+libcairo2-dev
 cmake
 build-essential
 ffmpeg
