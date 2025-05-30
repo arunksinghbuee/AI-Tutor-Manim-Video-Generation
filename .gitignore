@@ -1,7 +1,6 @@
 # Virtual env
 myenv/
 venv/
-.env
 
 # Streamlit/Manim caches & generated media
 media/videos/
