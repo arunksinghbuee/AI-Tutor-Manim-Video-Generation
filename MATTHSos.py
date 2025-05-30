@@ -40,7 +40,7 @@ load_dotenv()
 openrouter_api_key=st.secrets["OPENROUTER_API_KEY"]
 genai.configure(api_key="AIzaSyAv-7vAyzZ5tF35HU3OMSQirq7P7N9G9Cg")
 model = genai.GenerativeModel('gemini-1.5-flash-latest')
-client = ElevenLabs(api_key="sk_5450845d3d335627f0de12de94b31aaa69a98796650c67a0")
+client = ElevenLabs(api_key=st.secrets["ELEVENLABS_API_KEY"])
 
 # Page configuration
 st.set_page_config(
