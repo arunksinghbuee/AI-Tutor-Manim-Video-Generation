@@ -1245,12 +1245,12 @@ NOTE!!!: Make sure the objects or text in the generated code are not overlapping
             # DeepSeek enhancement
             client_openrouter = OpenAI(
                 base_url="https://openrouter.ai/api/v1",
-                api_key="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",
+                api_key="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",
             )
             
             completion = client_openrouter.chat.completions.create(
                 extra_headers={
-                    "HTTP-Referer": "https://math-tutor-app.com",
+                    "HTTP-Referer": "https://neo-ai-tutor.streamlit.app/",
                     "X-Title": "AI Math Tutor",
                 },
                 model="deepseek/deepseek-r1-zero:free",
