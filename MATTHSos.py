@@ -35,8 +35,9 @@ import time
 # ================================
 # CONFIGURATION & SETUP
 # ================================
-
+load_dotenv()
 # Configure APIs
+openrouter_api_key=os.getenv("OPENROUTER_API_KEY")
 genai.configure(api_key="AIzaSyAv-7vAyzZ5tF35HU3OMSQirq7P7N9G9Cg")
 model = genai.GenerativeModel('gemini-1.5-flash-latest')
 client = ElevenLabs(api_key="sk_eac54f8ab139472fbf9f2677c67f2be081f87e137b39b594")
@@ -1245,13 +1246,13 @@ NOTE!!!: Make sure the objects or text in the generated code are not overlapping
             # DeepSeek enhancement
             client_openrouter = OpenAI(
                 base_url="https://openrouter.ai/api/v1",
-                api_key="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",
+                api_key=openrouter_api_key,
             )
             
             completion = client_openrouter.chat.completions.create(
                 extra_headers={
                     "HTTP-Referer": "https://neo-ai-tutor.streamlit.app/",
-                    "X-Title": "AI Math Tutor",
+                    "X-Title": "Neo - AI Tutor",
                 },
                 model="deepseek/deepseek-r1-zero:free",
                 messages=[
