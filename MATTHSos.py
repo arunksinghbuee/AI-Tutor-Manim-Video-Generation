@@ -1245,7 +1245,7 @@ NOTE!!!: Make sure the objects or text in the generated code are not overlapping
             # DeepSeek enhancement
             client_openrouter = OpenAI(
                 base_url="https://openrouter.ai/api/v1",
-                api_key="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",
+                api_key="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",
             )
             
             completion = client_openrouter.chat.completions.create(
