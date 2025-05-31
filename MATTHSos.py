@@ -38,7 +38,7 @@ import time
 # load_dotenv()
 # Configure APIs
 openrouter_api_key=st.secrets["OPENROUTER_API_KEY"]
-genai.configure(api_key="AIzaSyAv-7vAyzZ5tF35HU3OMSQirq7P7N9G9Cg")
+genai.configure(api_key="AIzaSyARf_V_zWsvicjib-BapHg4ZX35H9JFgfo")
 model = genai.GenerativeModel('gemini-1.5-flash-latest')
 # client = ElevenLabs(api_key=st.secrets["ELEVENLABS_API_KEY"])
 
@@ -1313,44 +1313,47 @@ NOTE!!!: Make sure the objects or text in the generated code are not overlapping
                     },
                     {
                         "role": "user",
-                        "content": f""""Enhance the following Manim code in the clean, mathematical style of 3Blue1Brown. The video should last more than 45 seconds with smooth pacing and no flashy effects. Extend the animation meaningfully to ensure it is easy to understand, visually engaging, and includes super pictorial representations of the concepts. Maintain a minimal and elegant approach, keeping all elements within screen boundaries. Use smooth fade-outs for unnecessary elements during transitions. Ensure all brackets are properly opened and closed. Output only the corrected and improved Manim code—exclude all explanations, formatting symbols, and do not use \boxed or backticks.        
+                        "content": f"""Enhance the following Manim code in the clean, mathematical style of 3Blue1Brown. The video should last more than 45 seconds with smooth pacing and no flashy effects. Extend the animation meaningfully to ensure it is easy to understand, visually engaging, and includes super pictorial representations of the concepts. Maintain a minimal and elegant approach, keeping all elements within screen boundaries. Use smooth fade-outs for unnecessary elements during transitions. Ensure all brackets are properly opened and closed. Output only the corrected and improved Manim code—exclude all explanations, formatting symbols, and do not use \boxed or backticks.
 ➤ Output exactly two sections:
 1. Manim Code: Provide only the corrected, complete Manim code. No comments, markdown, or explanation. The code should animate the core mathematical content clearly, using well-paced timing that naturally guides narration. Avoid excessive effects or transitions — clarity comes first.
 2. Voiceover Script: Provide a voiceover narration that strictly matches the visual content and timing of the animation. Focus only on the main mathematical or conceptual steps shown on screen — do not narrate transitions, animations, or metadata. Avoid filler words, enthusiasm, or theatrical tone. The narration must be clear, instructional, and paced to match each animation block. Do not describe what the animation is doing — only narrate the concept or math that is visually being presented.
+
 ⚠ Ensure:
 Each visual step has a corresponding voiceover line.
 Timing feels natural based on animation durations.
 No LaTeX compilation errors will occur in Manim using MathTex.
 The formatting works well with both Tex and MathTex.
 No voiceover for padding animations like fading in/out titles, logo reveals, or decorative motion.
+
 Your task is to enhance Manim code with these principles:
-                    1. Mathematical Clarity:
-                    - Precise alignment of all elements
-                    - Logical camera movements that follow the math
-                    - Clean labeling with proper LaTeX
+1. Mathematical Clarity:
+Precise alignment of all elements
+Logical camera movements that follow the math
+Clean labeling with proper LaTeX
 
-                    2. Visual Style:
-                    - Smooth animations (rate_func=smooth)
-                    - Minimalist color palette (blue, white, yellow highlights)
-                    - Proper use of TransformMatchingTex for equations
-                    - Subtle but effective scene transitions
+2. Visual Style:
+Smooth animations (rate_func=smooth)
+Minimalist color palette (blue, white, yellow highlights)
+Proper use of TransformMatchingTex for equations
+Subtle but effective scene transitions
 
-                    3. Code Quality:
-                    - Remove all redundant animations
-                    - Optimal use of VGroups
-                    - Proper scene cleanup
-                    - PEP 8 compliance
-                    - No visual clutter
+3. Code Quality:
+Remove all redundant animations
+Optimal use of VGroups
+Proper scene cleanup
+PEP 8 compliance
+No visual clutter
 
-                    Important requirements:
+Important requirements:
 Break down complex LaTeX into multiple MathTex(...) lines instead of nesting long equations inside one block.
 Avoid overuse of left and \right when not necessary, especially when wrapping expressions that contain fractions or nested parentheses.
 Use \frac properly, but avoid combining multiple left(...\right) pairs with \frac inside a single expression.
-Escape problematic LaTeX characters if needed (like _, ^, or \).
+Escape problematic LaTeX characters if needed (like _, ^, or ).
 Format the output using .scale(...) and .next_to(...) for proper placement of parts of the equation.
+
 Note : Important !!!!!!!!!!!!!!! Important Emergency!!!!!
-- No visual clutter
-- Text should not overwrite 
+No visual clutter
+Text should not overwrite
 {enhanced_script}"""
                     }
                 ],
