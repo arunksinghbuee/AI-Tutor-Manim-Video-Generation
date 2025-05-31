@@ -582,18 +582,26 @@ def generate_manim_video(manim_code, video_class_name="MathExplanation"):
     return video_path
 
 def synthesize_audio(text, voice="21m00Tcm4TlvDq8ikWAM", audio_path="explanation_audio.mp3"):
-    """Generate audio using ElevenLabs"""
-    audio_data = client.text_to_speech.convert(
-        text=text,
-        voice_id=voice,
-        model_id="eleven_multilingual_v2",
-        output_format="mp3_44100_128"
-    )
-    
-    with open(audio_path, "wb") as f:
-        for chunk in audio_data:
-            f.write(chunk)
-    return audio_path
+    """Generate audio using ElevenLabs, with error handling"""
+    try:
+        audio_data = client.text_to_speech.convert(
+            text=text,
+            voice_id=voice,
+            model_id="eleven_multilingual_v2",
+            output_format="mp3_44100_128"
+        )
+        
+        with open(audio_path, "wb") as f:
+            for chunk in audio_data:
+                f.write(chunk)
+
+        return audio_path
+
+    except Exception as e:
+        print("❌ Error during TTS synthesis:", e)
+        if "401" in str(e):
+            print("⚠️  Unauthorized or account flagged. Check your API key and account status.")
+        return None
 
 def combine_video_audio(video_path, audio_path, output_video="final_explanation.mp4"):
     """Combine video and audio"""
