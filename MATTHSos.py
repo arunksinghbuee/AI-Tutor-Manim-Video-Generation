@@ -35,12 +35,12 @@ import time
 # ================================
 # CONFIGURATION & SETUP
 # ================================
-load_dotenv()
+# load_dotenv()
 # Configure APIs
 openrouter_api_key=st.secrets["OPENROUTER_API_KEY"]
 genai.configure(api_key="AIzaSyAv-7vAyzZ5tF35HU3OMSQirq7P7N9G9Cg")
 model = genai.GenerativeModel('gemini-1.5-flash-latest')
-client = ElevenLabs(api_key=st.secrets["ELEVENLABS_API_KEY"])
+# client = ElevenLabs(api_key=st.secrets["ELEVENLABS_API_KEY"])
 
 # Page configuration
 st.set_page_config(
