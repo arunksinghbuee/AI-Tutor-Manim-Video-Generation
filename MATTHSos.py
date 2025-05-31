@@ -1345,11 +1345,11 @@ PEP 8 compliance
 No visual clutter
 
 Important requirements:
-Break down complex LaTeX into multiple MathTex(...) lines instead of nesting long equations inside one block.
-Avoid overuse of left and \right when not necessary, especially when wrapping expressions that contain fractions or nested parentheses.
-Use \frac properly, but avoid combining multiple left(...\right) pairs with \frac inside a single expression.
-Escape problematic LaTeX characters if needed (like _, ^, or ).
-Format the output using .scale(...) and .next_to(...) for proper placement of parts of the equation.
+Break down complex LaTeX into multiple MathTex(...) lines instead of nesting long equations inside one block.Avoid overuse of left and \right when not necessary, especially when wrapping expressions that contain fractions or nested parentheses.Use \frac properly, but avoid combining multiple left(...\right) pairs with \frac inside a single expression.Escape problematic LaTeX characters if needed (like _, ^, or ).Format the output using .scale(...) and .next_to(...) for proper placement of parts of the equation.
+I'm working on a Python 3.13 project using Manim (v0.19.0 or newer) and NumPy. I need to create a visualization involving dynamic elements like always_redraw, DashedLine, and coordinate axes. Please ensure the code handles points as consistent 3D NumPy arrays to avoid errors like ValueError: setting an array element with a sequence or ValueError: all the input arrays must have same number of dimensions.
+When generating points, such as the center of a circle or coordinates from Axes, always use .get_center() or axes.c2p(x, y) to convert them properly into 3D points. Avoid mixing 1D or 2D points with 3D points, as this can cause crashes in DashedLine or during array stacking.
+Ensure that any use of regular expressions uses raw string literals like r"\d+" to avoid SyntaxWarning: invalid escape sequence, which is stricter in Python 3.13. For any external libraries such as pydub, ensure compatibility with Python 3.13 syntax and avoid deprecated features or outdated patterns.
+Finally, please make the code modular and robust, with proper imports and error-free structure. I’m especially interested in reliable animation updates using Manim’s always_redraw, so make sure that lambda functions return valid Mobjects and handle updates gracefully throughout the animation timeline.
 
 Note : Important !!!!!!!!!!!!!!! Important Emergency!!!!!
 No visual clutter
