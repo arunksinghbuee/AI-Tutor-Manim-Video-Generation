@@ -1273,7 +1273,8 @@ NOTE!!!: Make sure the objects or text in the generated code are not overlapping
                     },
                     {
                         "role": "user",
-                        "content": f"enhance the following Manim code in the clean, mathematical style of 3Blue1Brown. The scene should last atleast 30 seconds with smooth pacing and no flashy effects. Extend the code with more meaningful lines to make the video longer, while keeping it minimal and elegant. Ensure all brackets are properly opened and closed. Do not exceed the screen space with lines or shapes, and fade out any unnecessary objects smoothly when transitioning between scenes. Output only the corrected and improved Manim code—exclude all explanations and formatting like backticks or \boxed.Note : If it was 3-dimension , then the text should be in 2-dimension {st.session_state.manim_script}"
+                        "content": f"""enhance the following Manim code in the clean, mathematical style of 3Blue1Brown. The scene should last more than 30 seconds with smooth pacing and no flashy effects. Extend the code with more meaningful lines to make the video longer, while keeping it minimal and elegant. Ensure all brackets are properly opened and closed. Do not exceed the screen space with lines or shapes, and fade out any unnecessary objects smoothly when transitioning between scenes. Output only the corrected and improved Manim code—exclude all explanations and formatting like backticks or \boxed.
+                         Note : If the code creates 3-dimension animation, then the text created for the animation should be in 2-dimension in the animated video {st.session_state.manim_script}"""
                     }
                 ],
                 max_tokens=4000,
