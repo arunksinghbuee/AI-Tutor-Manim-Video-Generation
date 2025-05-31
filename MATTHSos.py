@@ -581,26 +581,18 @@ def generate_manim_video(manim_code, video_class_name="MathExplanation"):
     
     return video_path
 
-def synthesize_audio(text, voice="21m00Tcm4TlvDq8ikWAM", audio_path="explanation_audio.mp3"):
-    """Generate audio using ElevenLabs, with error handling"""
+def synthesize_audio(text, audio_path="explanation_audio.mp3", lang="en"):
+    """Generate audio using gTTS (Google Text-to-Speech), with error handling."""
     try:
-        audio_data = client.text_to_speech.convert(
-            text=text,
-            voice_id=voice,
-            model_id="eleven_multilingual_v2",
-            output_format="mp3_44100_128"
-        )
-        
-        with open(audio_path, "wb") as f:
-            for chunk in audio_data:
-                f.write(chunk)
+        # Generate speech
+        tts = gTTS(text=text, lang=lang)
+        tts.save(audio_path)
 
+        print(f"✅ Audio saved to {audio_path}")
         return audio_path
 
     except Exception as e:
         print("❌ Error during TTS synthesis:", e)
-        if "401" in str(e):
-            print("⚠️  Unauthorized or account flagged. Check your API key and account status.")
         return None
 
 def combine_video_audio(video_path, audio_path, output_video="final_explanation.mp4"):
