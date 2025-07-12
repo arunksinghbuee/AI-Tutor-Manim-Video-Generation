@@ -1,4 +1,4 @@
-# 🧮 Neo — AI Tutor with Animated Explanations
+# 🧮 Neo - AI Tutor with Animated Explanations
 
 Neo is an advanced AI-powered chatbot tutor built with **Python** and **Streamlit** that not only solves math problems but also visually explains them using **Manim** animations and voice narration. Designed for students, educators, and visual learners, this tool combines the power of conversational AI with interactive, video-based learning.
 
