@@ -14,5 +14,6 @@ media/texts/
 __pycache__/
 *.pyc
 
+
 # Database (optional)
 math_tutor.db
