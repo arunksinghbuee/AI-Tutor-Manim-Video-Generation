@@ -1253,7 +1253,7 @@ NOTE!!!: Make sure the objects or text in the generated code are not overlapping
                     "HTTP-Referer": "https://neo-ai-tutor.streamlit.app/",
                     "X-Title": "Neo - AI Tutor",
                 },
-                model="deepseek/deepseek-chat-v3-0324:free",
+                model="qwen/qwen3-coder:free",
                 messages=[
                     {
                         "role": "system",
@@ -1287,7 +1287,7 @@ NOTE!!!: Make sure the objects or text in the generated code are not overlapping
             progress_placeholder.progress(100)
             
             final_completion = client_openrouter.chat.completions.create(
-                model="qwen/qwen3-coder:free",#openai/gpt-4o-mini
+                model="openai/gpt-4o-mini",#openai/gpt-4o-mini
                 messages=[
                     {
                         "role": "system",
