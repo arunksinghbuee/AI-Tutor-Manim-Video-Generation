@@ -37,8 +37,8 @@ import time
 # load_dotenv()
 # Configure APIs
 openrouter_api_key=st.secrets["OPENROUTER_API_KEY"]
-genai.configure(api_key="AIzaSyARf_V_zWsvicjib-BapHg4ZX35H9JFgfo")
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
+genai.configure(api_key="AIzaSyDsknUAKN-mMngF8CyBCEisByD-KbGi6EE")
+model = genai.GenerativeModel('gemini-2.5-pro-exp-03-25')
 # client = ElevenLabs(api_key=st.secrets["ELEVENLABS_API_KEY"])
 
 # Page configuration
@@ -1253,7 +1253,7 @@ NOTE!!!: Make sure the objects or text in the generated code are not overlapping
                     "HTTP-Referer": "https://neo-ai-tutor.streamlit.app/",
                     "X-Title": "Neo - AI Tutor",
                 },
-                model="meta-llama/llama-4-scout:free",
+                model="meta-llama/llama-4-maverick:free",
                 messages=[
                     {
                         "role": "system",
