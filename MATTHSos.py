@@ -38,7 +38,7 @@ import time
 # Configure APIs
 openrouter_api_key=st.secrets["OPENROUTER_API_KEY"]
 genai.configure(api_key="AIzaSyDsknUAKN-mMngF8CyBCEisByD-KbGi6EE")
-model = genai.GenerativeModel('gemini-2.5-pro-exp-03-25')
+model = genai.GenerativeModel('gemini-2.5-pro')
 # client = ElevenLabs(api_key=st.secrets["ELEVENLABS_API_KEY"])
 
 # Page configuration
