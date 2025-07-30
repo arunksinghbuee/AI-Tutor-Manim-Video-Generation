@@ -1253,7 +1253,7 @@ NOTE!!!: Make sure the objects or text in the generated code are not overlapping
                     "HTTP-Referer": "https://neo-ai-tutor.streamlit.app/",
                     "X-Title": "Neo - AI Tutor",
                 },
-                model="qwen/qwen3-coder:free",
+                model="deepseek/deepseek-r1:free",
                 messages=[
                     {
                         "role": "system",
