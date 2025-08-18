@@ -34,18 +34,68 @@ import time
 # ================================
 # CONFIGURATION & SETUP
 # ================================
-# load_dotenv()
-# Configure APIs
-openrouter_api_key=st.secrets["OPENROUTER_API_KEY"]
-genai.configure(api_key="AIzaSyDsknUAKN-mMngF8CyBCEisByD-KbGi6EE")
+
+def load_configuration():
+    """Load and validate all configuration from environment variables"""
+    # Load environment variables
+    load_dotenv()
+    
+    # API Keys
+    config = {
+        'openrouter_api_key': os.getenv("OPENROUTER_API_KEY"),
+        'google_gemini_api_key': os.getenv("GOOGLE_GEMINI_API_KEY"),
+        'elevenlabs_api_key': os.getenv("ELEVENLABS_API_KEY"),
+        
+        # Application Settings
+        'app_title': os.getenv("APP_TITLE", "Neo - AI Tutor"),
+        'app_layout': os.getenv("APP_LAYOUT", "wide"),
+        'sidebar_state': os.getenv("SIDEBAR_STATE", "expanded"),
+        
+        # Database Settings
+        'database_name': os.getenv("DATABASE_NAME", "math_tutor.db"),
+        
+        # Video Generation Settings
+        'manim_quality': os.getenv("MANIM_QUALITY", "ql"),
+        'video_fps': os.getenv("VIDEO_FPS", "15"),
+        'video_resolution': os.getenv("VIDEO_RESOLUTION", "480p"),
+        
+        # Audio Settings
+        'audio_language': os.getenv("AUDIO_LANGUAGE", "en"),
+        'audio_output_format': os.getenv("AUDIO_OUTPUT_FORMAT", "mp3"),
+        
+        # Security Settings
+        'password_hash_algorithm': os.getenv("PASSWORD_HASH_ALGORITHM", "sha256")
+    }
+    
+    # Validate required API keys
+    missing_keys = []
+    if not config['openrouter_api_key']:
+        missing_keys.append("OPENROUTER_API_KEY")
+    if not config['google_gemini_api_key']:
+        missing_keys.append("GOOGLE_GEMINI_API_KEY")
+    
+    if missing_keys:
+        st.error(f"❌ Missing required API keys: {', '.join(missing_keys)}. Please check your .env file.")
+        st.stop()
+    
+    return config
+
+# Load configuration
+config = load_configuration()
+
+# Configure Google Gemini
+genai.configure(api_key=config['google_gemini_api_key'])
 model = genai.GenerativeModel('gemini-2.5-pro')
-# client = ElevenLabs(api_key=st.secrets["ELEVENLABS_API_KEY"])
+
+# Configure ElevenLabs (optional)
+# if config['elevenlabs_api_key']:
+#     client = ElevenLabs(api_key=config['elevenlabs_api_key'])
 
 # Page configuration
 st.set_page_config(
-    page_title="Neo - AI Tutor",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title=config['app_title'],
+    layout=config['app_layout'],
+    initial_sidebar_state=config['sidebar_state']
 )
 
 # ================================
@@ -553,7 +603,13 @@ def clean_manim_script(script: str) -> str:
     script = "\n".join(lines)
     script = re.sub(r"```(?:python)?\s*", "", script)
     script = re.sub(r"```", "", script)
-    return script.strip()
+    
+    # Ensure the script starts with the proper import
+    cleaned_script = script.strip()
+    if not cleaned_script.startswith("from manim import"):
+        cleaned_script = "from manim import *\n\n" + cleaned_script
+    
+    return cleaned_script
 
 def generate_manim_video(manim_code, video_class_name="MathExplanation"):
     """Generate Manim video from script"""
@@ -564,9 +620,14 @@ def generate_manim_video(manim_code, video_class_name="MathExplanation"):
     with open(script_path, "w", encoding="utf-8") as f:
         f.write(cleaned_script)
     
-    subprocess.run(["manim", "-ql", script_path, video_class_name])
+    # Use configuration for Manim settings
+    manim_quality = config['manim_quality']
+    video_fps = config['video_fps']
+    video_resolution = config['video_resolution']
     
-    video_dir = f"media/videos/{video_class_name}_{timestamp}/480p15"
+    subprocess.run(["manim", f"-{manim_quality}", script_path, video_class_name])
+    
+    video_dir = f"media/videos/{video_class_name}_{timestamp}/{video_resolution}{video_fps}"
     if not os.path.exists(video_dir):
         return None
     
@@ -580,9 +641,17 @@ def generate_manim_video(manim_code, video_class_name="MathExplanation"):
     
     return video_path
 
-def synthesize_audio(text, audio_path="explanation_audio.mp3", lang="en"):
+def synthesize_audio(text, audio_path="explanation_audio.mp3", lang=None):
     """Generate audio using gTTS (Google Text-to-Speech), with error handling."""
     try:
+        # Use configuration for audio settings
+        if lang is None:
+            lang = config['audio_language']
+        
+        audio_format = config['audio_output_format']
+        if not audio_path.endswith(f".{audio_format}"):
+            audio_path = audio_path.rsplit(".", 1)[0] + f".{audio_format}"
+        
         # Generate speech
         tts = gTTS(text=text, lang=lang)
         tts.save(audio_path)
@@ -613,7 +682,18 @@ def combine_video_audio(video_path, audio_path, output_video="final_explanation.
 # ================================
 
 def hash_password(password):
-    return hashlib.sha256(str.encode(password)).hexdigest()
+    """Hash password using the configured algorithm from environment variables"""
+    algorithm = config['password_hash_algorithm']
+    
+    if algorithm == "sha256":
+        return hashlib.sha256(str.encode(password)).hexdigest()
+    elif algorithm == "sha1":
+        return hashlib.sha1(str.encode(password)).hexdigest()
+    elif algorithm == "md5":
+        return hashlib.md5(str.encode(password)).hexdigest()
+    else:
+        # Default to sha256 if unknown algorithm
+        return hashlib.sha256(str.encode(password)).hexdigest()
 
 def check_user(username, password):
     c.execute("SELECT * FROM users WHERE username=? AND password=?", (username, hash_password(password)))
@@ -689,7 +769,7 @@ def save_practice_set_as_pdf(practice_set):
 # DATABASE SETUP
 # ================================
 
-conn = sqlite3.connect('math_tutor.db')
+conn = sqlite3.connect(config['database_name'])
 c = conn.cursor()
 
 c.execute("""
@@ -1042,6 +1122,11 @@ def solve_problem_pipeline(problem, skill_level, topic):
                     4. No run time error.
                     5. The formation of text and diagrams should not ovelap and neatly visible in the video.
                     
+                    IMPORTANT: Always start your Manim script with these essential imports:
+                    from manim import *
+                    
+                    This import statement is CRITICAL and must be included at the very beginning of every Manim script.
+                    
                     there are some error you need to avoid(Important):
                     1. Attribute Errors
                         AttributeError: 'Scene' object has no attribute 'begin_ambient_camera_rotation'
@@ -1245,7 +1330,7 @@ NOTE!!!: Make sure the objects or text in the generated code are not overlapping
             # DeepSeek enhancement
             client_openrouter = OpenAI(
                 base_url="https://openrouter.ai/api/v1",
-                api_key=openrouter_api_key,
+                api_key=config['openrouter_api_key'],
             )
             
             completion = client_openrouter.chat.completions.create(
@@ -1313,7 +1398,11 @@ NOTE!!!: Make sure the objects or text in the generated code are not overlapping
                     },
                     {
                         "role": "user",
-                        "content": f"""Enhance the following Manim code in the clean, mathematical style of 3Blue1Brown. The video should last more than 45 seconds with smooth pacing and no flashy effects. Extend the animation meaningfully to ensure it is easy to understand, visually engaging, and includes super pictorial representations of the concepts. Maintain a minimal and elegant approach, keeping all elements within screen boundaries. Use smooth fade-outs for unnecessary elements during transitions. Ensure all brackets are properly opened and closed. Output only the corrected and improved Manim code—exclude all explanations, formatting symbols, and do not use \boxed or backticks.
+                        "content": f"""Enhance the following Manim code in the clean, mathematical style of 3Blue1Brown. The video should last more than 45 seconds with smooth pacing and no flashy effects. Extend the animation meaningfully to ensure it is easy to understand, visually engaging, and includes super pictorial representations of the concepts. Maintain a minimal and elegant approach, keeping all elements within screen boundaries. Use smooth fade-outs for unnecessary elements during transitions. Ensure all brackets are properly opened and closed. 
+
+IMPORTANT: Always start your Manim script with: from manim import *
+
+Output only the corrected and improved Manim code—exclude all explanations, formatting symbols, and do not use \boxed or backticks.
 ➤ Output exactly two sections:
 1. Manim Code: Provide only the corrected, complete Manim code. No comments, markdown, or explanation. The code should animate the core mathematical content clearly, using well-paced timing that naturally guides narration. Avoid excessive effects or transitions — clarity comes first.
 2. Voiceover Script: Provide a voiceover narration that strictly matches the visual content and timing of the animation. Focus only on the main mathematical or conceptual steps shown on screen — do not narrate transitions, animations, or metadata. Avoid filler words, enthusiasm, or theatrical tone. The narration must be clear, instructional, and paced to match each animation block. Do not describe what the animation is doing — only narrate the concept or math that is visually being presented.
