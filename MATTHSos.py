@@ -118,18 +118,18 @@ st.markdown("""
     --warning-color: #ffbf47;
     --error-color: #ff5757;
 
-    --bg-primary: #0a0a14;
-    --bg-secondary: #10101d;
-    --bg-tertiary: #1a1a2e;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --bg-tertiary: #e9ecef;
 
-    --text-primary: #f0f0f0;
-    --text-secondary: #c0c0c0;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
     --text-muted: #9d4edd;
 
     --border-color: rgba(123, 44, 191, 0.2);
 
-    --shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+    --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
 
     --border-radius: 12px;
 
@@ -146,26 +146,28 @@ st.markdown("""
 
 /* Header Styling */
 .main-header {
-    # background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
     padding: 2rem;
     border-radius: var(--border-radius);
     margin-bottom: 2rem;
     text-align: center;
     box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
 }
 
 .main-header h1 {
-    color: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     font-size: 2.5rem;
     font-weight: 700;
     margin: 0;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     letter-spacing: -0.025em;
 }
 
 .main-header p {
-    color: rgba(255,255,255,0.9);
+    color: var(--text-secondary);
     font-size: 1.1rem;
     margin: 0.5rem 0 0 0;
     font-weight: 400;
@@ -309,8 +311,8 @@ st.markdown("""
 .stTextInput > div > div > input,
 .stTextArea > div > div > textarea,
 .stSelectbox > div > div > select {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    border: 1px solid #dee2e6;
     border-radius: 8px;
     color: var(--text-primary);
     padding: 0.75rem;
@@ -323,8 +325,9 @@ st.markdown("""
 .stTextArea > div > div > textarea:focus,
 .stSelectbox > div > div > select:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 0 0 3px rgba(123, 44, 191, 0.1);
     outline: none;
+    background: var(--bg-primary);
 }
 
 /* Tab Styling */
@@ -410,8 +413,8 @@ st.markdown("""
 
 /* Code Blocks */
 .stCode {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    border: 1px solid #dee2e6;
     border-radius: 8px;
     font-family: 'JetBrains Mono', monospace;
 }
@@ -854,6 +857,7 @@ def main():
         background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        background-clip: text;
         font-size: 2.5rem;
         font-weight: bold;
         margin-bottom: 0.5rem;
