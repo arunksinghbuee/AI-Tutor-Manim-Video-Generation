@@ -149,7 +149,7 @@ logger.error("ERROR: This is an error message")
 logger.info("Configuring Google Gemini AI model")
 try:
     genai.configure(api_key=config['google_gemini_api_key'])
-    model = genai.GenerativeModel('gemini-2.5-pro')
+    model = genai.GenerativeModel('gemini-2.0-flash')
     logger.info("Google Gemini model configured successfully")
 except Exception as e:
     logger.error(f"Failed to configure Google Gemini: {str(e)}")
