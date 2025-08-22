@@ -4,7 +4,7 @@ FROM python:3.11-bullseye
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies in stages to avoid conflicts
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     libcairo2-dev \
@@ -17,15 +17,23 @@ RUN apt-get update && apt-get install -y \
     curl \
     # LaTeX dependencies for Manim
     texlive \
-    texlive-latex-extra \
     texlive-fonts-extra \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Install LaTeX dependencies separately to avoid conflicts
+RUN apt-get update && apt-get install -y \
+    texlive-latex-base \
     texlive-latex-recommended \
     texlive-science \
     texlive-fonts-extra \
     texlive-fonts-recommended \
+    texlive-latex-extra \
     dvipng \
     dvisvgm \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && apt-get autoremove -y
 
 # Copy requirements first for better caching
 COPY requirements.txt .
