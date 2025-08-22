@@ -55,6 +55,10 @@ def setup_logging():
     }
     log_level = log_level_map.get(log_level_str, logging.INFO)
     
+    # Print debug information to console
+    print(f"Setting up logging with level: {log_level_str} ({log_level})")
+    print(f"Log file will be created at: {log_dir / 'neo_ai_tutor.log'}")
+    
     # Configure logging
     logging.basicConfig(
         level=log_level,
@@ -76,8 +80,8 @@ def setup_logging():
     
     return logger
 
-# Initialize logging
-logger = setup_logging()
+# Initialize logging after environment variables are loaded
+logger = None
 
 # ================================
 # CONFIGURATION & SETUP
@@ -85,11 +89,8 @@ logger = setup_logging()
 
 def load_configuration():
     """Load and validate all configuration from environment variables"""
-    logger.info("Loading configuration from environment variables")
-    
-    # Load environment variables
+    # Load environment variables first
     load_dotenv()
-    logger.info("Environment variables loaded from .env file")
     
     # API Keys
     config = {
@@ -118,29 +119,31 @@ def load_configuration():
         'password_hash_algorithm': os.getenv("PASSWORD_HASH_ALGORITHM", "sha256")
     }
     
-    logger.info(f"Configuration loaded: app_title={config['app_title']}, layout={config['app_layout']}")
-    logger.info(f"Video settings: quality={config['manim_quality']}, fps={config['video_fps']}, resolution={config['video_resolution']}")
-    
     # Validate required API keys
     missing_keys = []
     if not config['openrouter_api_key']:
         missing_keys.append("OPENROUTER_API_KEY")
-        logger.error("Missing OPENROUTER_API_KEY")
     if not config['google_gemini_api_key']:
         missing_keys.append("GOOGLE_GEMINI_API_KEY")
-        logger.error("Missing GOOGLE_GEMINI_API_KEY")
     
     if missing_keys:
         error_msg = f"❌ Missing required API keys: {', '.join(missing_keys)}. Please check your .env file."
-        logger.error(error_msg)
         st.error(error_msg)
         st.stop()
     
-    logger.info("Configuration validation completed successfully")
     return config
 
 # Load configuration
 config = load_configuration()
+
+# Initialize logging after environment variables are loaded
+logger = setup_logging()
+
+# Test logging functionality
+logger.debug("DEBUG: This is a debug message")
+logger.info("INFO: This is an info message")
+logger.warning("WARNING: This is a warning message")
+logger.error("ERROR: This is an error message")
 
 # Configure Google Gemini
 logger.info("Configuring Google Gemini AI model")
