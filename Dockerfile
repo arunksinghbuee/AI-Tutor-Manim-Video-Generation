@@ -15,6 +15,16 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-eng \
     curl \
+    # LaTeX dependencies for Manim
+    texlive \
+    texlive-latex-extra \
+    texlive-fonts-extra \
+    texlive-latex-recommended \
+    texlive-science \
+    texlive-fonts-extra \
+    texlive-fonts-recommended \
+    dvipng \
+    dvisvgm \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
