@@ -30,6 +30,54 @@ import openai
 from dotenv import load_dotenv
 from openai import OpenAI
 import time
+import logging
+import traceback
+from pathlib import Path
+
+# ================================
+# LOGGING CONFIGURATION
+# ================================
+
+def setup_logging():
+    """Configure logging for the application"""
+    # Create logs directory if it doesn't exist
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+    
+    # Get log level from environment variable or default to INFO
+    log_level_str = os.getenv("LOG_LEVEL", "INFO").upper()
+    log_level_map = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL
+    }
+    log_level = log_level_map.get(log_level_str, logging.INFO)
+    
+    # Configure logging
+    logging.basicConfig(
+        level=log_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_dir / "neo_ai_tutor.log"),
+            logging.StreamHandler()  # Also log to console
+        ]
+    )
+    
+    # Create logger for this application
+    logger = logging.getLogger("NeoAITutor")
+    logger.setLevel(log_level)
+    
+    # Log application startup with current log level
+    logger.info("=" * 50)
+    logger.info(f"Neo AI Tutor Application Starting (Log Level: {log_level_str})")
+    logger.info("=" * 50)
+    
+    return logger
+
+# Initialize logging
+logger = setup_logging()
 
 # ================================
 # CONFIGURATION & SETUP
@@ -37,8 +85,11 @@ import time
 
 def load_configuration():
     """Load and validate all configuration from environment variables"""
+    logger.info("Loading configuration from environment variables")
+    
     # Load environment variables
     load_dotenv()
+    logger.info("Environment variables loaded from .env file")
     
     # API Keys
     config = {
@@ -67,31 +118,53 @@ def load_configuration():
         'password_hash_algorithm': os.getenv("PASSWORD_HASH_ALGORITHM", "sha256")
     }
     
+    logger.info(f"Configuration loaded: app_title={config['app_title']}, layout={config['app_layout']}")
+    logger.info(f"Video settings: quality={config['manim_quality']}, fps={config['video_fps']}, resolution={config['video_resolution']}")
+    
     # Validate required API keys
     missing_keys = []
     if not config['openrouter_api_key']:
         missing_keys.append("OPENROUTER_API_KEY")
+        logger.error("Missing OPENROUTER_API_KEY")
     if not config['google_gemini_api_key']:
         missing_keys.append("GOOGLE_GEMINI_API_KEY")
+        logger.error("Missing GOOGLE_GEMINI_API_KEY")
     
     if missing_keys:
-        st.error(f"❌ Missing required API keys: {', '.join(missing_keys)}. Please check your .env file.")
+        error_msg = f"❌ Missing required API keys: {', '.join(missing_keys)}. Please check your .env file."
+        logger.error(error_msg)
+        st.error(error_msg)
         st.stop()
     
+    logger.info("Configuration validation completed successfully")
     return config
 
 # Load configuration
 config = load_configuration()
 
 # Configure Google Gemini
-genai.configure(api_key=config['google_gemini_api_key'])
-model = genai.GenerativeModel('gemini-2.5-pro')
+logger.info("Configuring Google Gemini AI model")
+try:
+    genai.configure(api_key=config['google_gemini_api_key'])
+    model = genai.GenerativeModel('gemini-2.5-pro')
+    logger.info("Google Gemini model configured successfully")
+except Exception as e:
+    logger.error(f"Failed to configure Google Gemini: {str(e)}")
+    raise
 
 # Configure ElevenLabs (optional)
-# if config['elevenlabs_api_key']:
-#     client = ElevenLabs(api_key=config['elevenlabs_api_key'])
+if config['elevenlabs_api_key']:
+    logger.info("ElevenLabs API key found, configuring client")
+    try:
+        client = ElevenLabs(api_key=config['elevenlabs_api_key'])
+        logger.info("ElevenLabs client configured successfully")
+    except Exception as e:
+        logger.warning(f"Failed to configure ElevenLabs client: {str(e)}")
+else:
+    logger.info("ElevenLabs API key not provided, skipping configuration")
 
 # Page configuration
+logger.info("Configuring Streamlit page settings")
 st.set_page_config(
     page_title=config['app_title'],
     layout=config['app_layout'],
@@ -600,52 +673,106 @@ st.markdown("""
 
 def clean_manim_script(script: str) -> str:
     """Clean and format Manim script"""
-    lines = script.strip().splitlines()
-    if lines and lines[0].strip().startswith(r"\boxed{"):
-        lines = lines[1:-1]
-    script = "\n".join(lines)
-    script = re.sub(r"```(?:python)?\s*", "", script)
-    script = re.sub(r"```", "", script)
+    logger.info("Cleaning and formatting Manim script")
+    logger.debug(f"Original script length: {len(script)} characters")
     
-    # Ensure the script starts with the proper import
-    cleaned_script = script.strip()
-    if not cleaned_script.startswith("from manim import"):
-        cleaned_script = "from manim import *\n\n" + cleaned_script
-    
-    return cleaned_script
+    try:
+        lines = script.strip().splitlines()
+        logger.debug(f"Script has {len(lines)} lines")
+        
+        if lines and lines[0].strip().startswith(r"\boxed{"):
+            logger.debug("Removing boxed wrapper from script")
+            lines = lines[1:-1]
+        
+        script = "\n".join(lines)
+        script = re.sub(r"```(?:python)?\s*", "", script)
+        script = re.sub(r"```", "", script)
+        
+        # Ensure the script starts with the proper import
+        cleaned_script = script.strip()
+        if not cleaned_script.startswith("from manim import"):
+            logger.debug("Adding manim import statement")
+            cleaned_script = "from manim import *\n\n" + cleaned_script
+        
+        logger.info(f"Script cleaned successfully. Final length: {len(cleaned_script)} characters")
+        return cleaned_script
+        
+    except Exception as e:
+        logger.error(f"Error cleaning Manim script: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise
 
 def generate_manim_video(manim_code, video_class_name="MathExplanation"):
     """Generate Manim video from script"""
-    timestamp = int(time.time())
-    script_path = f"{video_class_name}_{timestamp}.py"
-    cleaned_script = clean_manim_script(manim_code)
+    logger.info(f"Starting Manim video generation for class: {video_class_name}")
     
-    with open(script_path, "w", encoding="utf-8") as f:
-        f.write(cleaned_script)
-    
-    # Use configuration for Manim settings
-    manim_quality = config['manim_quality']
-    video_fps = config['video_fps']
-    video_resolution = config['video_resolution']
-    
-    subprocess.run(["manim", f"-{manim_quality}", script_path, video_class_name])
-    
-    video_dir = f"media/videos/{video_class_name}_{timestamp}/{video_resolution}{video_fps}"
-    if not os.path.exists(video_dir):
+    try:
+        timestamp = int(time.time())
+        script_path = f"{video_class_name}_{timestamp}.py"
+        logger.debug(f"Script will be saved to: {script_path}")
+        
+        cleaned_script = clean_manim_script(manim_code)
+        
+        # Write script to file
+        logger.debug("Writing Manim script to file")
+        with open(script_path, "w", encoding="utf-8") as f:
+            f.write(cleaned_script)
+        logger.info(f"Manim script written to {script_path}")
+        
+        # Use configuration for Manim settings
+        manim_quality = config['manim_quality']
+        video_fps = config['video_fps']
+        video_resolution = config['video_resolution']
+        
+        logger.info(f"Manim settings: quality={manim_quality}, fps={video_fps}, resolution={video_resolution}")
+        
+        # Run Manim command
+        logger.info("Executing Manim command")
+        manim_command = ["manim", f"-{manim_quality}", script_path, video_class_name]
+        logger.debug(f"Manim command: {' '.join(manim_command)}")
+        
+        result = subprocess.run(manim_command, capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            logger.error(f"Manim command failed with return code {result.returncode}")
+            logger.error(f"Manim stderr: {result.stderr}")
+            logger.error(f"Manim stdout: {result.stdout}")
+            return None
+        
+        logger.info("Manim command executed successfully")
+        logger.debug(f"Manim stdout: {result.stdout}")
+        
+        # Find generated video
+        video_dir = f"media/videos/{video_class_name}_{timestamp}/{video_resolution}{video_fps}"
+        logger.debug(f"Looking for video in directory: {video_dir}")
+        
+        if not os.path.exists(video_dir):
+            logger.error(f"Video directory does not exist: {video_dir}")
+            return None
+        
+        video_files = [f for f in os.listdir(video_dir) if f.endswith(".mp4")]
+        logger.debug(f"Found {len(video_files)} video files: {video_files}")
+        
+        if not video_files:
+            logger.error("No video files found in output directory")
+            return None
+        
+        video_files.sort(key=lambda x: os.path.getmtime(os.path.join(video_dir, x)), reverse=True)
+        latest_video = video_files[0]
+        video_path = os.path.join(video_dir, latest_video)
+        
+        logger.info(f"Video generated successfully: {video_path}")
+        return video_path
+        
+    except Exception as e:
+        logger.error(f"Error generating Manim video: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return None
-    
-    video_files = [f for f in os.listdir(video_dir) if f.endswith(".mp4")]
-    if not video_files:
-        return None
-    
-    video_files.sort(key=lambda x: os.path.getmtime(os.path.join(video_dir, x)), reverse=True)
-    latest_video = video_files[0]
-    video_path = os.path.join(video_dir, latest_video)
-    
-    return video_path
 
 def synthesize_audio(text, audio_path="explanation_audio.mp3", lang=None):
     """Generate audio using gTTS (Google Text-to-Speech), with error handling."""
+    logger.info(f"Starting audio synthesis for text of length {len(text)} characters")
+    
     try:
         # Use configuration for audio settings
         if lang is None:
@@ -655,30 +782,63 @@ def synthesize_audio(text, audio_path="explanation_audio.mp3", lang=None):
         if not audio_path.endswith(f".{audio_format}"):
             audio_path = audio_path.rsplit(".", 1)[0] + f".{audio_format}"
         
+        logger.debug(f"Audio settings: language={lang}, format={audio_format}")
+        logger.debug(f"Audio will be saved to: {audio_path}")
+        
         # Generate speech
+        logger.info("Generating speech using gTTS")
         tts = gTTS(text=text, lang=lang)
         tts.save(audio_path)
 
-        print(f"✅ Audio saved to {audio_path}")
+        logger.info(f"✅ Audio saved to {audio_path}")
         return audio_path
 
     except Exception as e:
-        print("❌ Error during TTS synthesis:", e)
+        logger.error(f"❌ Error during TTS synthesis: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return None
 
 def combine_video_audio(video_path, audio_path, output_video="final_explanation.mp4"):
     """Combine video and audio"""
-    if not os.path.exists(video_path) or not os.path.exists(audio_path):
-        raise FileNotFoundError("Video or audio file not found")
+    logger.info(f"Starting video-audio combination")
+    logger.debug(f"Video path: {video_path}")
+    logger.debug(f"Audio path: {audio_path}")
+    logger.debug(f"Output path: {output_video}")
     
-    video = VideoFileClip(video_path)
-    audio = AudioFileClip(audio_path)
-    audio = audio.subclip(0, min(video.duration, audio.duration))
-    
-    final_video = video.set_audio(audio)
-    final_video.write_videofile(output_video, codec="libx264")
-    
-    return output_video
+    try:
+        # Check if input files exist
+        if not os.path.exists(video_path):
+            logger.error(f"Video file not found: {video_path}")
+            raise FileNotFoundError(f"Video file not found: {video_path}")
+        
+        if not os.path.exists(audio_path):
+            logger.error(f"Audio file not found: {audio_path}")
+            raise FileNotFoundError(f"Audio file not found: {audio_path}")
+        
+        logger.info("Loading video and audio files")
+        video = VideoFileClip(video_path)
+        audio = AudioFileClip(audio_path)
+        
+        logger.debug(f"Video duration: {video.duration}s")
+        logger.debug(f"Audio duration: {audio.duration}s")
+        
+        # Trim audio to match video duration
+        audio = audio.subclip(0, min(video.duration, audio.duration))
+        logger.debug(f"Audio trimmed to: {audio.duration}s")
+        
+        logger.info("Combining video and audio")
+        final_video = video.set_audio(audio)
+        
+        logger.info(f"Writing final video to: {output_video}")
+        final_video.write_videofile(output_video, codec="libx264")
+        
+        logger.info(f"✅ Video-audio combination completed: {output_video}")
+        return output_video
+        
+    except Exception as e:
+        logger.error(f"Error combining video and audio: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise
 
 # ================================
 # DATABASE FUNCTIONS (UNCHANGED)
@@ -687,54 +847,96 @@ def combine_video_audio(video_path, audio_path, output_video="final_explanation.
 def hash_password(password):
     """Hash password using the configured algorithm from environment variables"""
     algorithm = config['password_hash_algorithm']
+    logger.debug(f"Hashing password using algorithm: {algorithm}")
     
-    if algorithm == "sha256":
-        return hashlib.sha256(str.encode(password)).hexdigest()
-    elif algorithm == "sha1":
-        return hashlib.sha1(str.encode(password)).hexdigest()
-    elif algorithm == "md5":
-        return hashlib.md5(str.encode(password)).hexdigest()
-    else:
-        # Default to sha256 if unknown algorithm
-        return hashlib.sha256(str.encode(password)).hexdigest()
+    try:
+        if algorithm == "sha256":
+            return hashlib.sha256(str.encode(password)).hexdigest()
+        elif algorithm == "sha1":
+            return hashlib.sha1(str.encode(password)).hexdigest()
+        elif algorithm == "md5":
+            return hashlib.md5(str.encode(password)).hexdigest()
+        else:
+            logger.warning(f"Unknown hash algorithm '{algorithm}', defaulting to sha256")
+            return hashlib.sha256(str.encode(password)).hexdigest()
+    except Exception as e:
+        logger.error(f"Error hashing password: {str(e)}")
+        raise
 
 def check_user(username, password):
-    c.execute("SELECT * FROM users WHERE username=? AND password=?", (username, hash_password(password)))
-    return c.fetchone() is not None
+    logger.debug(f"Checking user authentication for username: {username}")
+    try:
+        c.execute("SELECT * FROM users WHERE username=? AND password=?", (username, hash_password(password)))
+        result = c.fetchone() is not None
+        logger.debug(f"User authentication result: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Error checking user authentication: {str(e)}")
+        return False
 
 def create_user(username, password):
+    logger.info(f"Creating new user: {username}")
     try:
         progress = json.dumps({"completed_topics": [], "quiz_scores": {}, "practice_sets": {}})
         c.execute("INSERT INTO users (username, password, progress) VALUES (?, ?, ?)", 
                  (username, hash_password(password), progress))
         conn.commit()
+        logger.info(f"User '{username}' created successfully")
         return True
-    except sqlite3.IntegrityError:
+    except sqlite3.IntegrityError as e:
+        logger.warning(f"User '{username}' already exists: {str(e)}")
+        return False
+    except Exception as e:
+        logger.error(f"Error creating user '{username}': {str(e)}")
         return False
 
 def get_progress(username):
-    c.execute("SELECT progress FROM users WHERE username=?", (username,))
-    result = c.fetchone()
-    if result and result[0]:
-        return json.loads(result[0])
-    return {"completed_topics": [], "quiz_scores": {}, "practice_sets": {}}
+    logger.debug(f"Getting progress for user: {username}")
+    try:
+        c.execute("SELECT progress FROM users WHERE username=?", (username,))
+        result = c.fetchone()
+        if result and result[0]:
+            progress = json.loads(result[0])
+            logger.debug(f"Retrieved progress for '{username}': {len(progress.get('completed_topics', []))} topics completed")
+            return progress
+        else:
+            logger.debug(f"No progress found for user '{username}', returning default")
+            return {"completed_topics": [], "quiz_scores": {}, "practice_sets": {}}
+    except Exception as e:
+        logger.error(f"Error getting progress for user '{username}': {str(e)}")
+        return {"completed_topics": [], "quiz_scores": {}, "practice_sets": {}}
 
 def update_progress(username, topic, score=None, practice_set=None):
-    c.execute("SELECT progress FROM users WHERE username=?", (username,))
-    result = c.fetchone()
-    if result:
-        progress = json.loads(result[0] or '{"completed_topics": [], "quiz_scores": {}, "practice_sets": {}}')
-    else:
-        progress = {"completed_topics": [], "quiz_scores": {}, "practice_sets": {}}
+    logger.info(f"Updating progress for user '{username}', topic: '{topic}'")
+    logger.debug(f"Update details - score: {score}, practice_set: {practice_set is not None}")
     
-    if topic not in progress["completed_topics"]:
-        progress["completed_topics"].append(topic)
-    if score is not None:
-        progress["quiz_scores"][topic] = score
-    if practice_set is not None:
-        progress["practice_sets"][topic] = practice_set
-    c.execute("UPDATE users SET progress=? WHERE username=?", (json.dumps(progress), username))
-    conn.commit()
+    try:
+        c.execute("SELECT progress FROM users WHERE username=?", (username,))
+        result = c.fetchone()
+        if result:
+            progress = json.loads(result[0] or '{"completed_topics": [], "quiz_scores": {}, "practice_sets": {}}')
+        else:
+            progress = {"completed_topics": [], "quiz_scores": {}, "practice_sets": {}}
+        
+        if topic not in progress["completed_topics"]:
+            progress["completed_topics"].append(topic)
+            logger.debug(f"Added topic '{topic}' to completed topics")
+        
+        if score is not None:
+            progress["quiz_scores"][topic] = score
+            logger.debug(f"Updated quiz score for '{topic}': {score}")
+        
+        if practice_set is not None:
+            progress["practice_sets"][topic] = practice_set
+            logger.debug(f"Updated practice set for '{topic}'")
+        
+        c.execute("UPDATE users SET progress=? WHERE username=?", (json.dumps(progress), username))
+        conn.commit()
+        logger.info(f"Progress updated successfully for user '{username}'")
+        
+    except Exception as e:
+        logger.error(f"Error updating progress for user '{username}': {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
 
 def save_practice_set_as_pdf(practice_set):
     pdf_buffer = io.BytesIO()
@@ -772,23 +974,42 @@ def save_practice_set_as_pdf(practice_set):
 # DATABASE SETUP
 # ================================
 
-conn = sqlite3.connect(config['database_name'])
-c = conn.cursor()
+logger.info(f"Initializing database: {config['database_name']}")
 
-c.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        username TEXT PRIMARY KEY,
-        password TEXT,
-        progress TEXT
-    )
-""")
-conn.commit()
+try:
+    conn = sqlite3.connect(config['database_name'])
+    c = conn.cursor()
+    logger.info("Database connection established successfully")
 
-c.execute("PRAGMA table_info(users)")
-columns = [column[1] for column in c.fetchall()]
-if 'progress' not in columns:
-    c.execute("ALTER TABLE users ADD COLUMN progress TEXT")
+    # Create users table if it doesn't exist
+    logger.debug("Creating users table if it doesn't exist")
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT,
+            progress TEXT
+        )
+    """)
     conn.commit()
+    logger.info("Users table created/verified successfully")
+
+    # Check if progress column exists
+    c.execute("PRAGMA table_info(users)")
+    columns = [column[1] for column in c.fetchall()]
+    logger.debug(f"Current table columns: {columns}")
+    
+    if 'progress' not in columns:
+        logger.info("Adding progress column to users table")
+        c.execute("ALTER TABLE users ADD COLUMN progress TEXT")
+        conn.commit()
+        logger.info("Progress column added successfully")
+    else:
+        logger.debug("Progress column already exists")
+
+except Exception as e:
+    logger.error(f"Database initialization failed: {str(e)}")
+    logger.error(f"Traceback: {traceback.format_exc()}")
+    raise
 
 # ================================
 # SESSION STATE INITIALIZATION
@@ -828,10 +1049,13 @@ def display_status_message(message_type, message):
     """Display styled status messages"""
     if message_type == "success":
         st.markdown(f'<div class="status-success">✅ {message}</div>', unsafe_allow_html=True)
+        logger.info(f"Status message (success): {message}")
     elif message_type == "warning":
         st.markdown(f'<div class="status-warning">⚠️ {message}</div>', unsafe_allow_html=True)
+        logger.warning(f"Status message (warning): {message}")
     elif message_type == "error":
         st.markdown(f'<div class="status-error">❌ {message}</div>', unsafe_allow_html=True)
+        logger.error(f"Status message (error): {message}")
 
 def create_nav_item(icon, text, key, is_active=False):
     """Create a navigation item"""
@@ -848,6 +1072,7 @@ def create_nav_item(icon, text, key, is_active=False):
 # ================================
 
 def main():
+    logger.info("Starting Neo AI Tutor application")
     initialize_session_state()
     
     # Header
@@ -872,10 +1097,12 @@ def main():
     
     # Authentication check
     if st.session_state.user is None:
+        logger.info("User not authenticated, showing auth interface")
         show_auth_interface()
         return
     
     # Main application interface
+    logger.info(f"User authenticated: {st.session_state.user}, showing main interface")
     show_main_interface()
 
 def show_auth_interface():
@@ -893,11 +1120,14 @@ def show_auth_interface():
             password = st.text_input("Password", type="password", key="login_password", placeholder="Enter your password")
             
             if st.button("🚀 Login", key="login_btn"):
+                logger.info(f"Login attempt for user: {username}")
                 if check_user(username, password):
                     st.session_state.user = username
+                    logger.info(f"User '{username}' logged in successfully")
                     display_status_message("success", "Logged in successfully!")
                     st.rerun()
                 else:
+                    logger.warning(f"Failed login attempt for user: {username}")
                     display_status_message("error", "Invalid username or password")
         
         with tab2:
@@ -906,9 +1136,12 @@ def show_auth_interface():
             new_password = st.text_input("Choose Password", type="password", key="signup_password", placeholder="Create a secure password")
             
             if st.button("✨ Create Account", key="signup_btn"):
+                logger.info(f"Signup attempt for user: {new_username}")
                 if create_user(new_username, new_password):
+                    logger.info(f"User '{new_username}' account created successfully")
                     display_status_message("success", "Account created successfully! Please log in.")
                 else:
+                    logger.warning(f"Failed to create account for user: {new_username} (username already exists)")
                     display_status_message("error", "Username already exists")
         
         st.markdown('</div>', unsafe_allow_html=True)
@@ -991,6 +1224,7 @@ def show_main_interface():
         
         # Logout Button
         if st.button("🚪 Logout", use_container_width=True):
+            logger.info(f"User '{st.session_state.user}' logging out")
             st.session_state.user = None
             st.rerun()
     
@@ -1085,19 +1319,31 @@ def show_problem_solver(skill_level, topic):
 
 def solve_problem_pipeline(problem, skill_level, topic):
     """Execute the complete problem solving pipeline with progress tracking"""
+    logger.info(f"Starting problem solving pipeline")
+    logger.info(f"Problem: {problem[:100]}...")  # Log first 100 chars
+    logger.info(f"Skill level: {skill_level}, Topic: {topic}")
     
     progress_placeholder = st.empty()
     status_placeholder = st.empty()
     
     try:
         # Stage 1: Generate solution
+        logger.info("Stage 1: Generating step-by-step solution")
         with st.spinner("🧠 Generating step-by-step solution..."):
             progress_placeholder.progress(20)
             prompt = f"Solve this {skill_level.lower()} level {topic.lower()} problem step by step, providing detailed explanations for each step. Problem: {problem}"
-            response = model.generate_content(prompt)
-            st.session_state.solution_text = response.text
+            logger.debug(f"Solution prompt length: {len(prompt)} characters")
+            
+            try:
+                response = model.generate_content(prompt)
+                st.session_state.solution_text = response.text
+                logger.info(f"Solution generated successfully, length: {len(response.text)} characters")
+            except Exception as e:
+                logger.error(f"Error generating solution: {str(e)}")
+                raise
         
         # Stage 2: Generate Manim script
+        logger.info("Stage 2: Generating Manim animation script")
         with st.spinner("🎨 Creating animation script..."):
             progress_placeholder.progress(50)
             manim_prompt = f"""
@@ -1324,10 +1570,18 @@ NOTE!!!: Make sure the objects or text in the generated code are not overlapping
                     Remember, provide ONLY executable code with NO explanatory text or markdown formatting. {problem}
             """
             
-            solution_response = model.generate_content(manim_prompt)
-            st.session_state.manim_script = solution_response.text
+            logger.debug(f"Manim prompt length: {len(manim_prompt)} characters")
+            
+            try:
+                solution_response = model.generate_content(manim_prompt)
+                st.session_state.manim_script = solution_response.text
+                logger.info(f"Manim script generated successfully, length: {len(solution_response.text)} characters")
+            except Exception as e:
+                logger.error(f"Error generating Manim script: {str(e)}")
+                raise
         
         # Stage 3: Enhance with multi-stage AI
+        logger.info("Stage 3: Enhancing with advanced AI models")
         with st.spinner("🔧 Enhancing with advanced AI models..."):
             progress_placeholder.progress(80)
             
@@ -1467,39 +1721,57 @@ Text should not overwrite
                 st.session_state.audio_script = "No voiceover script generated. Please try again."
         
         progress_placeholder.empty()
+        logger.info("Problem solving pipeline completed successfully")
         display_status_message("success", "Problem solved successfully! Click 'Generate Video Explanation' to create the video.")
         
     except Exception as e:
         progress_placeholder.empty()
+        logger.error(f"Error in problem solving pipeline: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         display_status_message("error", f"An error occurred: {str(e)}")
 
 def generate_video_explanation():
     """Generate the complete video explanation with progress tracking"""
+    logger.info("Starting video explanation generation")
+    
     try:
         progress_placeholder = st.empty()
         
+        logger.info("Stage 1: Generating Manim animation")
         with st.spinner("🎨 Generating Manim animation..."):
             progress_placeholder.progress(33)
             video_path = generate_manim_video(st.session_state.manim_script)
             if not video_path:
+                logger.error("Failed to generate Manim video")
                 raise Exception("Failed to generate Manim video")
+            logger.info(f"Manim video generated: {video_path}")
         
+        logger.info("Stage 2: Synthesizing audio narration")
         with st.spinner("🎙️ Synthesizing audio narration..."):
             progress_placeholder.progress(66)
             audio_path = synthesize_audio(st.session_state.audio_script)
+            if not audio_path:
+                logger.error("Failed to synthesize audio")
+                raise Exception("Failed to synthesize audio")
+            logger.info(f"Audio synthesized: {audio_path}")
         
+        logger.info("Stage 3: Combining video and audio")
         with st.spinner("🎬 Combining video and audio..."):
             progress_placeholder.progress(100)
             final_video_path = combine_video_audio(video_path, audio_path)
+            logger.info(f"Final video created: {final_video_path}")
         
         st.session_state.final_video_path = final_video_path
         st.session_state.video_generated = True
         
         progress_placeholder.empty()
+        logger.info("Video explanation generation completed successfully")
         display_status_message("success", "Video generated successfully!")
         st.rerun()
         
     except Exception as e:
+        logger.error(f"Video generation failed: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         display_status_message("error", f"Video generation failed: {str(e)}")
 
 def show_handwritten_solver(skill_level, topic):
@@ -2342,4 +2614,6 @@ if __name__ == "__main__":
     main()
 
 # Close database connection
+logger.info("Closing database connection")
 conn.close()
+logger.info("Neo AI Tutor application shutdown complete")

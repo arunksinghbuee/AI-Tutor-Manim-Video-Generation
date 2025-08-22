@@ -75,6 +75,14 @@ PASSWORD_HASH_ALGORITHM=sha256
 ### Security Settings
 - `PASSWORD_HASH_ALGORITHM`: Hashing algorithm for passwords ("sha256", "sha1", "md5")
 
+### Logging Settings
+- `LOG_LEVEL`: Logging level for debugging ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+  - **DEBUG**: Most detailed information for development
+  - **INFO**: General application flow (default)
+  - **WARNING**: Only warnings and errors
+  - **ERROR**: Only critical errors
+  - **CRITICAL**: System-breaking errors only
+
 ## 🚀 Getting Started
 
 1. **Copy the example**: Copy the environment variables above
@@ -129,6 +137,16 @@ DATABASE_NAME=math_tutor.db
 MANIM_QUALITY=ql
 VIDEO_FPS=15
 VIDEO_RESOLUTION=480p
+
+# Audio Settings
+AUDIO_LANGUAGE=en
+AUDIO_OUTPUT_FORMAT=mp3
+
+# Security Settings
+PASSWORD_HASH_ALGORITHM=sha256
+
+# Logging Configuration
+LOG_LEVEL=INFO
 
 # Audio Settings
 AUDIO_LANGUAGE=en
