@@ -1060,6 +1060,19 @@ def display_status_message(message_type, message):
         st.markdown(f'<div class="status-error">❌ {message}</div>', unsafe_allow_html=True)
         logger.error(f"Status message (error): {message}")
 
+def get_safe_prompt_suggestions(original_prompt):
+    """Get suggestions for rephrasing prompts that were blocked"""
+    suggestions = [
+        "Try using more academic language",
+        "Avoid potentially controversial topics",
+        "Focus on the mathematical aspects only",
+        "Use neutral, educational terminology",
+        "Break down complex problems into simpler parts",
+        "Avoid references to weapons, violence, or harmful content",
+        "Use standard mathematical notation and terminology"
+    ]
+    return suggestions
+
 def create_nav_item(icon, text, key, is_active=False):
     """Create a navigation item"""
     active_class = "active" if is_active else ""
@@ -1334,15 +1347,59 @@ def solve_problem_pipeline(problem, skill_level, topic):
         logger.info("Stage 1: Generating step-by-step solution")
         with st.spinner("🧠 Generating step-by-step solution..."):
             progress_placeholder.progress(20)
-            prompt = f"Solve this {skill_level.lower()} level {topic.lower()} problem step by step, providing detailed explanations for each step. Problem: {problem}"
-            logger.debug(f"Solution prompt length: {len(prompt)} characters")
+            
+            # Create a safer, more academic prompt
+            safe_prompt = f"""Please provide a step-by-step mathematical solution for the following {skill_level.lower()} level {topic.lower()} problem. 
+            Focus on clear mathematical explanations and educational content only.
+            
+            Problem: {problem}
+            
+            Please provide:
+            1. A clear understanding of the problem
+            2. Step-by-step mathematical solution
+            3. Explanation of each step
+            4. Final answer with verification
+            
+            Use standard mathematical notation and terminology."""
+            
+            logger.debug(f"Solution prompt length: {len(safe_prompt)} characters")
             
             try:
-                response = model.generate_content(prompt)
+                response = model.generate_content(safe_prompt)
+                
+                # Check if response is valid and not blocked
+                if not response or not hasattr(response, 'text'):
+                    logger.error("Invalid response from Gemini API")
+                    raise Exception("Invalid response from AI model")
+                
+                # Check finish reason
+                if hasattr(response, 'candidates') and response.candidates:
+                    candidate = response.candidates[0]
+                    if hasattr(candidate, 'finish_reason'):
+                        finish_reason = candidate.finish_reason
+                        logger.debug(f"Gemini finish_reason: {finish_reason}")
+                        
+                        if finish_reason == 1:  # BLOCKED
+                            logger.error("Gemini response was blocked by safety filters")
+                            raise Exception("AI response was blocked by safety filters. Please try rephrasing your question.")
+                        elif finish_reason == 2:  # STOP
+                            logger.info("Gemini response completed normally")
+                        elif finish_reason == 3:  # MAX_TOKENS
+                            logger.warning("Gemini response was truncated due to token limit")
+                        else:
+                            logger.warning(f"Unknown finish_reason: {finish_reason}")
+                
+                # Validate response text
+                if not response.text or response.text.strip() == "":
+                    logger.error("Empty response from Gemini API")
+                    raise Exception("AI model returned an empty response. Please try again.")
+                
                 st.session_state.solution_text = response.text
                 logger.info(f"Solution generated successfully, length: {len(response.text)} characters")
+                
             except Exception as e:
                 logger.error(f"Error generating solution: {str(e)}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 raise
         
         # Stage 2: Generate Manim script
@@ -1577,10 +1634,40 @@ NOTE!!!: Make sure the objects or text in the generated code are not overlapping
             
             try:
                 solution_response = model.generate_content(manim_prompt)
+                
+                # Check if response is valid and not blocked
+                if not solution_response or not hasattr(solution_response, 'text'):
+                    logger.error("Invalid response from Gemini API for Manim script")
+                    raise Exception("Invalid response from AI model for animation script")
+                
+                # Check finish reason
+                if hasattr(solution_response, 'candidates') and solution_response.candidates:
+                    candidate = solution_response.candidates[0]
+                    if hasattr(candidate, 'finish_reason'):
+                        finish_reason = candidate.finish_reason
+                        logger.debug(f"Gemini finish_reason (Manim): {finish_reason}")
+                        
+                        if finish_reason == 1:  # BLOCKED
+                            logger.error("Gemini Manim response was blocked by safety filters")
+                            raise Exception("AI response for animation was blocked by safety filters. Please try rephrasing your question.")
+                        elif finish_reason == 2:  # STOP
+                            logger.info("Gemini Manim response completed normally")
+                        elif finish_reason == 3:  # MAX_TOKENS
+                            logger.warning("Gemini Manim response was truncated due to token limit")
+                        else:
+                            logger.warning(f"Unknown finish_reason (Manim): {finish_reason}")
+                
+                # Validate response text
+                if not solution_response.text or solution_response.text.strip() == "":
+                    logger.error("Empty response from Gemini API for Manim script")
+                    raise Exception("AI model returned an empty response for animation script. Please try again.")
+                
                 st.session_state.manim_script = solution_response.text
                 logger.info(f"Manim script generated successfully, length: {len(solution_response.text)} characters")
+                
             except Exception as e:
                 logger.error(f"Error generating Manim script: {str(e)}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 raise
         
         # Stage 3: Enhance with multi-stage AI
@@ -1731,7 +1818,20 @@ Text should not overwrite
         progress_placeholder.empty()
         logger.error(f"Error in problem solving pipeline: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
-        display_status_message("error", f"An error occurred: {str(e)}")
+        
+        # Provide specific guidance for blocked responses
+        if "blocked by safety filters" in str(e):
+            error_message = f"❌ {str(e)}"
+            suggestions = get_safe_prompt_suggestions(problem)
+            
+            st.error(error_message)
+            st.warning("💡 **Suggestions to rephrase your question:**")
+            for suggestion in suggestions:
+                st.write(f"• {suggestion}")
+            
+            st.info("🔄 **Try again with a rephrased question that focuses on the mathematical content.**")
+        else:
+            display_status_message("error", f"An error occurred: {str(e)}")
 
 def generate_video_explanation():
     """Generate the complete video explanation with progress tracking"""
